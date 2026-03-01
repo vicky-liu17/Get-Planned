@@ -1,6 +1,7 @@
 // components/TaskBlock.tsx
 "use client";
 
+import { useState } from "react"; // 👈 新增引入 useState
 import { Clock, MapPin, Repeat, Check } from "lucide-react";
 import { Task } from "@/types";
 import { getCategoryClass } from "@/utils/taskUtils";
@@ -50,6 +51,9 @@ export default function TaskBlock({
 }: TaskBlockProps) {
   const isEditing = editingTaskId === task.id;
   const isCompleted = task.completedDates?.includes(targetDate);
+  
+  // 👈 新增：专门用于控制喷发动画的局部状态
+  const [showBurst, setShowBurst] = useState(false); 
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") onSaveEdit(task.id);
@@ -58,6 +62,14 @@ export default function TaskBlock({
 
   const handleToggleCheck = (e: React.MouseEvent) => {
     e.stopPropagation(); // 关键：阻止冒泡，避免触发编辑模式
+    
+    // 👈 新增核心逻辑：只有在“点击且即将完成”的那一刻才触发动画
+    if (!isCompleted) {
+      setShowBurst(true);
+      // 动画播放完后重置状态（假设 CSS 动画大约需要 1 秒，可根据你的 CSS 时长微调）
+      setTimeout(() => setShowBurst(false), 1000); 
+    }
+
     onToggleComplete(task.id, targetDate);
   };
 
@@ -125,8 +137,8 @@ export default function TaskBlock({
             <Check size={12} strokeWidth={4} className="check-mark" />
           </div>
           
-          {/* 粒子喷发容器（锚定在右侧按钮位置） */}
-          {isCompleted && (
+          {/* 👈 修改点：不再依赖 isCompleted，而是依赖我们手动控制的 showBurst */}
+          {showBurst && (
             <div className="achievement-burst">
               {[...Array(6)].map((_, i) => (
                 <span key={i} className={`particle p${i + 1}`} />
