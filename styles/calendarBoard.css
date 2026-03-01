@@ -3,9 +3,11 @@
    Theme: Minimal Zen (Refined Notion Style)
    ========================================================================== */
 
+/* 1. 外层区域：必须限制最小高度，防止高度穿透 */
 .calendar-section {
   position: relative;
   flex: 1;
+  min-height: 0; 
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -22,20 +24,24 @@
   z-index: 5;
 }
 
+/* 2. 横向滚动外壳：严格控制自身在屏幕内 */
 .calendar-wrapper {
-  width: 100%; height: 100%;
+  width: 100%; 
+  flex: 1;
+  min-height: 0; 
   overflow-x: auto; 
-  overflow-y: hidden; /* 保持主容器不纵向滚动，由各列内部滚动 */
+  overflow-y: hidden; /* 外层严格只允许横向滚动，纵向交给内部的 day-column */
   scroll-behavior: smooth;
-  padding-bottom: 20px; 
+  padding-bottom: 16px; 
   padding-top: 10px;
 }
 
+/* 3. 看板面板：完美继承高度 */
 .calendar-board {
   display: flex;
   gap: 16px; /* 增加间距，更有呼吸感 */
   align-items: flex-start;
-  min-height: 100%;
+  height: 100%;
   padding: 0 4px; /* 给起始位置留点呼吸位 */
 }
 
@@ -47,11 +53,27 @@
   background: var(--surface-1);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-lg);
-  max-height: calc(100vh - 220px); /* 自动适配屏幕高度 */
-  overflow: hidden;
+  
+  max-height: 100%; /* 贴合父容器高度 */
+  overflow-y: auto; /* 内容多时触发独立滚动 */
+  overflow-x: hidden;
+  padding-bottom: 8px; /* 底部留白 */
+
   transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), 
               box-shadow 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
   box-shadow: var(--shadow-sm);
+}
+
+/* 隐藏列滚动条（改细），保持高级感 */
+.day-column::-webkit-scrollbar {
+  width: 4px; 
+}
+.day-column::-webkit-scrollbar-thumb {
+  background: var(--border-soft);
+  border-radius: 10px;
+}
+.day-column:hover::-webkit-scrollbar-thumb {
+  background: var(--border-mid); 
 }
 
 /* 悬浮交互：Notion 风格的轻微浮起 */
@@ -130,7 +152,8 @@
 
 /* ── 时间分组 (Time Groups: Morning/Afternoon/Evening) ── */
 .time-group {
-  flex: 1;
+  /* 🌟 核心修复：1代表可以放大，0代表内容多时绝不压缩，auto代表基础高度根据内容决定 */
+  flex: 1 0 auto; 
   display: flex; 
   flex-direction: column;
   padding: 16px 20px;

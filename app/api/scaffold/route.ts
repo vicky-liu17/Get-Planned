@@ -3,14 +3,14 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
     try {
-        // 接收前端传来的命令、当天日期、当前具体时间，以及现有的任务列表
+        // Receive command, current date, current time, and existing tasks from the frontend
         const { command, currentDate, currentTime, tasks } = await req.json();
 
         if (!command) {
             return NextResponse.json({ error: "Command is required" }, { status: 400 });
         }
 
-        // 【核心防呆1】为 AI 生成一张“未来 7 天日历对照表”，防止它在跨月（如2月底）时算错日期！
+        // [Core Failsafe 1] Generate a 7-day future calendar reference to prevent AI from miscalculating dates across months
         const [cYear, cMonth, cDay] = currentDate.split('-').map(Number);
         const dateRef = [];
         const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -19,11 +19,11 @@ export async function POST(req: Request) {
             const y = tempD.getFullYear();
             const m = String(tempD.getMonth() + 1).padStart(2, "0");
             const dNum = String(tempD.getDate()).padStart(2, "0");
-            let label = i === 0 ? "Today" : i === 1 ? "Tomorrow" : i === 2 ? "Day after tomorrow (后面两天/后天)" : `+${i} days`;
+            let label = i === 0 ? "Today" : i === 1 ? "Tomorrow" : i === 2 ? "Day after tomorrow" : `+${i} days`;
             dateRef.push(`- ${label}: ${y}-${m}-${dNum} (${weekdays[tempD.getDay()]})`);
         }
 
-        // 【核心防呆2】把原有任务的 category, exactTime, location 都喂给 AI，防止更新时色彩和属性丢失
+        // [Core Failsafe 2] Feed existing task properties to the AI to prevent loss of colors and attributes during updates
         const contextTasks = (tasks || []).map((t: any) => ({
             id: t.id,
             name: t.taskName,
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
             deletedDates: t.deletedDates || []
         }));
 
-const response = await fetch("https://api.deepseek.com/chat/completions", {
+        const response = await fetch("https://api.deepseek.com/chat/completions", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -55,36 +55,45 @@ Current local time is ${currentTime || "Unknown"} (24-hour format).
 CRITICAL CALENDAR REFERENCE:
 ${dateRef.join('\n')}
 
-Current Tasks:
+Current Tasks Schedule:
 ${JSON.stringify(contextTasks)}
 
 Rules:
-1. STRICT TIME TRAVEL BAN (HIGHEST PRIORITY): If the user wants to set or change an "exactTime", you MUST convert it to 24-hour HH:MM format. If "suggestedDate" is TODAY (${currentDate}), you MUST compare the new "exactTime" with "${currentTime}". If "exactTime" < "${currentTime}", it is in the past! YOU MUST REJECT IT entirely. Return action="ERROR" with errorMessage: "The time has already passed, please choose a future time!".
-2. CREATE: If adding a new task, return action="CREATE", fill "taskDetails". (Check Rule 1 first!)
-3. UPDATE: If modifying a task, return action="UPDATE", set "targetTaskId", and provide the FULL updated "taskDetails". (CRITICAL: You MUST preserve category, exactTime, and location unless explicitly changed. FATAL WARNING: If the user changes the time to a past time today, you MUST ABORT and trigger Rule 1 ERROR instead of updating!).
-4. DELETE: If completely deleting a task series, return action="DELETE", set "targetTaskId".
-5. SKIP A SPECIFIC DATE: If skipping a recurring task on a specific date, return action="UPDATE", set "targetTaskId", and ADD that date to "deletedDates" in "taskDetails".
-6. MODIFY A SPECIFIC DATE: If modifying ONLY ONE SPECIFIC DAY of a recurring task, return action="MODIFY_INSTANCE", set "targetTaskId", provide "targetDate" ("YYYY-MM-DD"), and provide modified "taskDetails" (recurrence="none").
-7. EXTEND / MULTIPLE DAYS: If user extends an existing task, return action="UPDATE", KEEP "suggestedDate" unchanged, KEEP "recurrence" as "none", but MUST set "endDate" to the EXACT final date using the Calendar Reference above.
-8. ERROR: If impossible or missing task, return action="ERROR" and a friendly "errorMessage" in English only.
+1. DATE DEFAULT & SMART SPILLOVER (CRITICAL): If the user does not specify a date, your first choice is TODAY. HOWEVER, check the "Current Tasks Schedule". If TODAY is crowded (e.g., 2+ tasks in a bucket), you MUST spill over flexible tasks to TOMORROW. If TOMORROW is also crowded, intelligently push tasks to the DAY AFTER TOMORROW. Your goal is a healthy, balanced schedule across the next 3-4 days.
+2. STRICT TIME TRAVEL BAN: Convert "exactTime" to 24-hour HH:MM. If "suggestedDate" is TODAY and "exactTime" < "${currentTime}", REJECT IT. EXCEPTION: If current time > 20:00 and user inputs "0:00" or "midnight", set "suggestedDate" to Tomorrow.
+3. EXACT TIME & BUCKET MAPPING: "timeBucket" MUST strictly logically match "exactTime". 
+   - 00:00 to 11:59 = "morning"
+   - 12:00 to 17:59 = "afternoon"
+   - 18:00 to 23:59 = "evening"
+4. ABSOLUTE CHRONOLOGICAL ORDER: If tasks are linked by sequences like "then" (e.g., Task A, then Task B), Task A MUST be scheduled BEFORE or at the SAME TIME as Task B. Sequence strictly overrules load balancing.
+5. MULTI-DAY LOAD BALANCING: For independent tasks without "then", distribute them to less crowded buckets AND less crowded days. Do not cram 4-5 tasks into one day if the next day is completely empty.
+6. CREATE: return action="CREATE", fill "taskDetails".
+7. UPDATE: return action="UPDATE", set "targetTaskId", provide FULL updated "taskDetails" (preserve category/exactTime/location).
+8. DELETE: return action="DELETE", set "targetTaskId".
+9. REASONING: Provide a short, friendly explanation of your arrangement logic in the "reasoning" field. Explain your priorities, and explicitly mention if you pushed a task to tomorrow or the day after tomorrow to balance their workload. End it with: "(Tip: You can drag and drop cards to adjust the calendar!)".
 
-Return ONLY a valid JSON object matching this schema:
+Return ONLY a valid JSON object matching this EXACT schema:
 {
-  "action": "CREATE" | "UPDATE" | "DELETE" | "MODIFY_INSTANCE" | "ERROR",
-  "targetTaskId": "string (empty if CREATE or ERROR)",
-  "targetDate": "YYYY-MM-DD (only if action is MODIFY_INSTANCE)",
-  "taskDetails": {
-    "taskName": "string",
-    "suggestedDate": "YYYY-MM-DD",
-    "endDate": "YYYY-MM-DD" | "",
-    "timeBucket": "morning" | "afternoon" | "evening" | "any",
-    "category": "work" | "study" | "health" | "life" | "entertainment" | "other",
-    "exactTime": "HH:MM" | "",
-    "location": "string" | "",
-    "recurrence": "none" | "daily" | "weekdays" | "weekends" | "weekly" | "monthly",
-    "deletedDates": ["YYYY-MM-DD"]
-  },
-  "errorMessage": "string (only if action is ERROR)"
+  "reasoning": "string (Your explanation of the schedule)",
+  "operations": [
+    {
+      "action": "CREATE" | "UPDATE" | "DELETE" | "MODIFY_INSTANCE" | "ERROR",
+      "targetTaskId": "string (empty if CREATE or ERROR)",
+      "targetDate": "YYYY-MM-DD (only if action is MODIFY_INSTANCE)",
+      "taskDetails": {
+        "taskName": "string",
+        "suggestedDate": "YYYY-MM-DD",
+        "endDate": "YYYY-MM-DD" | "",
+        "timeBucket": "morning" | "afternoon" | "evening" | "any",
+        "category": "work" | "study" | "health" | "life" | "entertainment" | "other",
+        "exactTime": "HH:MM" | "",
+        "location": "string" | "",
+        "recurrence": "none" | "daily" | "weekdays" | "weekends" | "weekly" | "monthly",
+        "deletedDates": ["YYYY-MM-DD"]
+      },
+      "errorMessage": "string (only if action is ERROR)"
+    }
+  ]
 }`
                     },
                     { role: "user", content: command }
@@ -100,7 +109,7 @@ Return ONLY a valid JSON object matching this schema:
 
         try {
             const steps = JSON.parse(content);
-            return NextResponse.json({ steps });
+            return NextResponse.json(steps);
         } catch (parseError) {
             return NextResponse.json({ error: "Format error", raw: content }, { status: 500 });
         }

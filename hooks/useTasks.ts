@@ -30,46 +30,67 @@ export function useTasks(userEmail: string | null) {
   }, [userEmail]);
 
   // ── 3. AI 操作逻辑 (全部改为调用 saveTasks) ─────────────────────────────────
+// ── 3. AI 操作逻辑 (改造为支持多任务批处理) ─────────────────────────────────
   const applyAIResult = useCallback((aiResult: any, todayStr: string) => {
     if (!aiResult) return { error: null };
     if (!userEmail) return { error: "Please log in first!" }; 
 
-    if (aiResult.action === "ERROR") {
-      return { error: aiResult.errorMessage || "Sorry, I couldn't understand that." };
+    // 1. 错误拦截
+    // 如果整体是 ERROR，或者 operations 里的第一个动作是 ERROR
+    if (aiResult.action === "ERROR" || (aiResult.operations && aiResult.operations[0]?.action === "ERROR")) {
+      const errMsg = aiResult.errorMessage || aiResult.operations?.[0]?.errorMessage || "Sorry, I couldn't process that.";
+      return { error: errMsg, reasoning: null };
     }
 
-    if (aiResult.action === "CREATE" && aiResult.taskDetails) {
-      const details = aiResult.taskDetails;
-      const finalTimeBucket = details.timeBucket && details.timeBucket !== "any" ? details.timeBucket : getCurrentTimeBucket();
+    // 2. 拷贝当前任务列表，用于在内存中进行批处理
+    let currentTasks = [...tasks];
+    
+    // 3. 兼容处理：提取 operations 数组（兼容万一 AI 没按格式返回的情况）
+    const operations = aiResult.operations || (aiResult.action ? [aiResult] : []);
+
+    // 4. 遍历并执行每一个操作
+    operations.forEach((op: any) => {
+      if (op.action === "CREATE" && op.taskDetails) {
+        const details = op.taskDetails;
+        const finalTimeBucket = details.timeBucket && details.timeBucket !== "any" 
+          ? details.timeBucket 
+          : getCurrentTimeBucket();
+        
+        const newTask: Task = {
+          id: Math.random().toString(36).substring(7), // 本地生成随机 ID
+          taskName: details.taskName,
+          suggestedDate: details.suggestedDate || todayStr,
+          endDate: details.endDate || "",
+          timeBucket: finalTimeBucket,
+          category: details.category || "other",
+          exactTime: details.exactTime || "",
+          location: details.location || "",
+          recurrence: details.recurrence || "none",
+          deletedDates: details.deletedDates || [],
+          completedDates: []
+        };
+        
+        currentTasks.push(newTask);
+      }
+
+      else if (op.action === "UPDATE" && op.targetTaskId) {
+        currentTasks = currentTasks.map(t => 
+          t.id === op.targetTaskId ? { ...t, ...op.taskDetails } : t
+        );
+      }
+
+      else if (op.action === "DELETE" && op.targetTaskId) {
+        currentTasks = currentTasks.filter(t => t.id !== op.targetTaskId);
+      }
       
-      const newTask: Task = {
-        id: Math.random().toString(36).substring(7), // 本地生成随机 ID
-        taskName: details.taskName,
-        suggestedDate: details.suggestedDate || todayStr,
-        endDate: details.endDate || "",
-        timeBucket: finalTimeBucket,
-        category: details.category || "other",
-        exactTime: details.exactTime || "",
-        location: details.location || "",
-        recurrence: details.recurrence || "none",
-        deletedDates: details.deletedDates || [],
-        completedDates: []
-      };
-      
-      saveTasks([...tasks, newTask]);
-    }
+      // 注意：如果你之前实现了 MODIFY_INSTANCE 等其他逻辑，也可以在这里对应追加 else if
+    });
 
-    else if (aiResult.action === "UPDATE" && aiResult.targetTaskId) {
-      const updated = tasks.map(t => t.id === aiResult.targetTaskId ? { ...t, ...aiResult.taskDetails } : t);
-      saveTasks(updated);
-    }
+    // 5. 批处理完成后，一次性保存到本地状态和 LocalStorage
+    saveTasks(currentTasks);
 
-    else if (aiResult.action === "DELETE" && aiResult.targetTaskId) {
-      const filtered = tasks.filter(t => t.id !== aiResult.targetTaskId);
-      saveTasks(filtered);
-    }
-
-    return { error: null };
+    // 6. 将 AI 的安排理由 (reasoning) 传回给组件
+    return { error: null, reasoning: aiResult.reasoning };
   }, [tasks, userEmail, saveTasks]);
 
   // ── 4. 其他所有拖拽、修改操作 (全部改为 saveTasks) ───────────────────────────

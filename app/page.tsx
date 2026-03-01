@@ -1,7 +1,7 @@
 // app/page.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { getLocalDateString } from "@/utils/dateUtils";
 import { LEGEND } from "@/utils/taskUtils";
 import { useTasks } from "@/hooks/useTasks";
@@ -18,6 +18,30 @@ export default function Home() {
   const [inputError, setInputError] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [todayStr, setTodayStr] = useState(getLocalDateString(new Date()));
+
+  // ── 新增：AI 思考与理由状态 ────────────────────────────────────────
+  const [aiReasoning, setAiReasoning] = useState<string>("");
+  const [thinkingIndex, setThinkingIndex] = useState(0);
+
+  const thinkingPhrases = useMemo(() => [
+    "Thinking about your schedule...",
+    "Analyzing task priorities...",
+    "Balancing your workload...",
+    "Drafting the perfect plan..."
+  ], []);
+
+  // 循环播放思考文案
+  useEffect(() => {
+    if (loading) {
+      const timer = setInterval(() => {
+        setThinkingIndex((prev) => (prev + 1) % thinkingPhrases.length);
+      }, 1500);
+      return () => clearInterval(timer);
+    } else {
+      setThinkingIndex(0);
+    }
+  }, [loading, thinkingPhrases]);
+  // ─────────────────────────────────────────────────────────────────────────────
 
   // ── 本地 Auth State ────────────────────────────────────────
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -79,6 +103,7 @@ export default function Home() {
     }
 
     setLoading(true);
+    setAiReasoning(""); // 提交前清空旧的理由
     const originalInput = inputValue;
 
     try {
@@ -93,14 +118,19 @@ export default function Home() {
 
       const data = await res.json();
       const aiResult = data.steps || data;
-      const { error } = applyAIResult(aiResult, todayStr); 
+      
+      // 注意：从 applyAIResult 解构出 reasoning
+      const { error, reasoning } = applyAIResult(aiResult, todayStr); 
 
       if (error) {
         setInputError(true); setErrorMsg(error); setInputValue("");
         setTimeout(() => { setInputError(false); setErrorMsg(""); setInputValue(originalInput); }, 3000);
         return;
       }
+      
       setInputValue("");
+      if (reasoning) setAiReasoning(reasoning); // 成功后设置 AI 理由
+
     } catch (err) {
       console.error(err);
     } finally {
@@ -135,6 +165,32 @@ export default function Home() {
       </div>
 
       <InputBar value={inputValue} loading={loading} hasError={inputError} errorMsg={errorMsg} onChange={setInputValue} onSubmit={handleSubmit} />
+
+      {/* 🌟 动态加载状态与 AI 理由展示区域 */}
+      <div style={{ minHeight: '30px', marginBottom: '16px', textAlign: 'center', transition: 'all 0.3s' }}>
+        {loading ? (
+          <div style={{ color: '#FF835C', fontSize: '14px', fontWeight: 500, animation: 'pulse-dot 1.5s infinite' }}>
+            {thinkingPhrases[thinkingIndex]}
+          </div>
+        ) : aiReasoning ? (
+          <div style={{
+            background: 'var(--today-bg)', border: '1px solid var(--today-border)',
+            color: 'var(--text-secondary)', padding: '10px 16px', borderRadius: '12px',
+            fontSize: '13px', display: 'inline-block', maxWidth: '80%', lineHeight: '1.5',
+            boxShadow: 'var(--shadow-sm)', textAlign: 'left'
+          }}>
+            <span style={{fontWeight: 600, color: 'var(--today-accent)', marginRight: '6px'}}>✨ AI:</span>
+            {aiReasoning}
+            <span 
+              onClick={() => setAiReasoning("")} 
+              style={{cursor: 'pointer', marginLeft: '12px', color: '#999', fontWeight: 'bold'}}
+              title="Dismiss"
+            >
+              ✕
+            </span>
+          </div>
+        ) : null}
+      </div>
 
       <div className="legend">
         {LEGEND.map((l) => (
