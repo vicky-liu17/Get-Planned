@@ -1,0 +1,180 @@
+/* ==========================================================================
+   styles/inputBar.css — 顶部标题、输入框与分类图例
+   Theme: Minimal Zen (Refined Notion & Headspace)
+   ========================================================================== */
+
+/* ── 标题区域 (Title Section) ── */
+.title-section { 
+  text-align: center; 
+  margin-bottom: 24px; 
+}
+
+.title-section h1 {
+  font-family: 'Outfit', 'Syne', sans-serif; /* 使用更圆润的字体 */
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 标题旁边的呼吸感装饰点 */
+.title-section h1::before {
+  content: '';
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--today-accent); /* 使用 Headspace 暖橙 */
+  box-shadow: 0 0 0 4px var(--today-dim);
+  animation: pulse-dot 2.4s ease-in-out infinite;
+}
+
+/* ── 输入框容器 (Input Wrapper) ── */
+.input-wrapper {
+  display: flex;
+  align-items: center;
+  background: var(--surface-2); /* 使用 Notion 搜索框式的淡灰色 */
+  border: 1px solid transparent; /* 默认无边框 */
+  border-radius: var(--radius-xl);
+  padding: 6px 8px 6px 20px;
+  margin-bottom: 24px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.input-wrapper:focus-within {
+  background: var(--surface-1); /* 聚焦时变白 */
+  border-color: var(--today-accent);
+  box-shadow: 0 0 0 3px var(--today-dim), var(--shadow-sm);
+}
+
+.main-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-family: 'Inter', 'DM Sans', sans-serif;
+  font-size: 1rem;
+  padding: 12px 0;
+  outline: none;
+}
+
+.main-input::placeholder { 
+  color: var(--text-tertiary); 
+  font-weight: 400; 
+  opacity: 0.8;
+}
+
+/* ── 发送按钮 (Submit Button) ── */
+.submit-btn {
+  width: 38px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  color: var(--text-tertiary);
+  border: none;
+  border-radius: 50%; /* 圆形按钮更轻盈 */
+  cursor: not-allowed;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+
+/* 激活状态：不再是笨重的色块，而是优雅的图标变色或淡背景 */
+.submit-btn.active {
+  background: var(--today-dim);
+  color: var(--today-accent);
+  cursor: pointer;
+}
+
+.submit-btn.active:hover {
+  background: var(--today-accent);
+  color: #fff;
+  transform: scale(1.05) rotate(5deg);
+  box-shadow: 0 4px 12px var(--today-border);
+}
+
+/* ── 加载动画 (Spinner) ── */
+.spinner {
+  width: 20px; height: 20px;
+  border: 2.5px solid var(--border-soft);
+  border-top-color: var(--today-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── 错误状态 (Error State) ── */
+.input-error {
+  animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  border-color: #FF4D4D !important;
+  box-shadow: 0 0 0 3px rgba(255, 77, 77, 0.1) !important;
+  background: #FFF8F8 !important;
+}
+
+.input-error .main-input::placeholder { color: #FF4D4D; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+/* ── 分类图例 (Legend - Pill Style) ── */
+.legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 4px 18px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex; 
+  align-items: center; 
+  gap: 6px;
+  font-size: 0.7rem; 
+  color: var(--text-secondary);
+  font-weight: 600; 
+  text-transform: uppercase; 
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border-radius: 20px; /* 药丸形状 */
+  background: var(--surface-2); /* 默认淡灰背景 */
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+/* 悬停时稍微加深分类颜色暗示 */
+.legend-item:hover {
+  border-color: var(--border-mid);
+  transform: translateY(-1px);
+}
+
+.legend-dot { 
+  width: 6px; height: 6px; 
+  border-radius: 50%; 
+}
+
+/* 为 Legend Item 对应分类色添加极淡背景 (可选，增加高级感) */
+.legend-item:nth-child(1) { background: var(--cb-work); color: var(--c-work); }
+.legend-item:nth-child(2) { background: var(--cb-study); color: var(--c-study); }
+.legend-item:nth-child(3) { background: var(--cb-health); color: var(--c-health); }
+.legend-item:nth-child(4) { background: var(--cb-fun); color: var(--c-fun); }
+.legend-item:nth-child(5) { background: var(--cb-life); color: var(--c-life); }
+.legend-item:nth-child(6) { background: var(--cb-other); color: var(--c-other); }
+
+/* 强制 Legend 中的点使用 base 变量 */
+.legend-item:nth-child(1) .legend-dot { background: var(--c-work); }
+.legend-item:nth-child(2) .legend-dot { background: var(--c-study); }
+.legend-item:nth-child(3) .legend-dot { background: var(--c-health); }
+.legend-item:nth-child(4) .legend-dot { background: var(--c-fun); }
+.legend-item:nth-child(5) .legend-dot { background: var(--c-life); }
+.legend-item:nth-child(6) .legend-dot { background: var(--c-other); }
+
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 3px var(--today-dim); }
+  50% { box-shadow: 0 0 0 7px rgba(255, 131, 92, 0.05); }
+}

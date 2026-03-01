@@ -1,0 +1,90 @@
+/* styles/actionDesk.css — Drag & Drop Action Dock */
+
+.action-desk-wrapper {
+  position: fixed;
+  bottom: -110px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  transition: bottom 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  width: 90%;
+  max-width: 800px;
+  height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  pointer-events: none;
+}
+.action-desk-wrapper.visible {
+  bottom: 28px;
+  pointer-events: auto;
+}
+
+.action-drop-area {
+  flex: 1; height: 100%;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-radius: var(--radius-xl);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 5px;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.78rem; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 4px 24px rgba(45, 40, 32, 0.12), 0 1px 0 rgba(255,255,255,0.9) inset;
+}
+
+/* Delete This */
+.trash-area {
+  border: 1.5px dashed rgba(224, 85, 85, 0.40);
+  color: rgba(200, 70, 70, 0.65);
+}
+.trash-area.active {
+  background: #FFF0F0;
+  border: 1.5px solid #E05555;
+  color: #C83030;
+  transform: scale(1.04);
+  box-shadow: 0 8px 28px rgba(224, 85, 85, 0.28);
+}
+.trash-area.active svg { animation: action-shake 0.3s ease-in-out infinite; }
+
+/* Delete All */
+.trash-all-area {
+  border: 1.5px dashed rgba(180, 30, 30, 0.45);
+  color: rgba(170, 30, 30, 0.75);
+}
+.trash-all-area.active {
+  background: #FFF0F0;
+  border: 1.5px solid #C83030;
+  color: #A01818;
+  transform: scale(1.04);
+  box-shadow: 0 8px 28px rgba(200, 48, 48, 0.30);
+}
+.trash-all-area.active svg { animation: action-shake 0.3s ease-in-out infinite; }
+
+@keyframes action-shake {
+  0%, 100% { transform: rotate(0deg) scale(1.1); }
+  25%       { transform: rotate(-8deg) scale(1.1); }
+  75%       { transform: rotate( 8deg) scale(1.1); }
+}
+
+/* Duplicate — warm amber */
+.duplicate-area {
+  border: 1.5px dashed rgba(245, 166, 35, 0.45);
+  color: rgba(200, 130, 20, 0.75);
+}
+.duplicate-area.active {
+  background: #FFFBEE;
+  border: 1.5px solid var(--accent);
+  color: #B87C10;
+  transform: scale(1.04);
+  box-shadow: 0 8px 28px rgba(245, 166, 35, 0.28);
+}
+.duplicate-area.active svg { animation: copy-pulse 0.55s ease-in-out infinite; color: var(--accent); }
+
+@keyframes copy-pulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.22); }
+}

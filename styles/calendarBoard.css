@@ -1,0 +1,203 @@
+/* ==========================================================================
+   styles/calendarBoard.css — 看板与日历列布局
+   Theme: Minimal Zen (Refined Notion Style)
+   ========================================================================== */
+
+.calendar-section {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 侧边渐变遮罩：增加空间进深感 */
+.calendar-section::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 60px; height: 100%;
+  background: linear-gradient(to left, var(--bg), transparent);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.calendar-wrapper {
+  width: 100%; height: 100%;
+  overflow-x: auto; 
+  overflow-y: hidden; /* 保持主容器不纵向滚动，由各列内部滚动 */
+  scroll-behavior: smooth;
+  padding-bottom: 20px; 
+  padding-top: 10px;
+}
+
+.calendar-board {
+  display: flex;
+  gap: 16px; /* 增加间距，更有呼吸感 */
+  align-items: flex-start;
+  min-height: 100%;
+  padding: 0 4px; /* 给起始位置留点呼吸位 */
+}
+
+/* ── 日历列 (Day Column) ── */
+.day-column {
+  flex: 0 0 280px; /* 固定宽度，确保整齐 */
+  display: flex; 
+  flex-direction: column;
+  background: var(--surface-1);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  max-height: calc(100vh - 220px); /* 自动适配屏幕高度 */
+  overflow: hidden;
+  transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), 
+              box-shadow 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 悬浮交互：Notion 风格的轻微浮起 */
+.day-column:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--border-mid);
+}
+
+/* 今天的高亮：Headspace 式的顶部彩条设计 */
+.day-column.today-column {
+  background: var(--today-bg);
+  border-color: var(--today-border);
+  position: relative;
+}
+
+.day-column.today-column::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: var(--today-accent);
+  z-index: 2;
+}
+
+/* 周末背景微调 */
+.day-column.weekend-column {
+  background: var(--weekend-bg);
+}
+
+/* 过去日期的褪色感 */
+.day-column.past-column {
+  background: var(--past-bg);
+  opacity: 0.7;
+}
+
+/* ── 日期头部 (Day Header) ── */
+.day-header {
+  display: flex; 
+  flex-direction: column; /* 纵向排列日期和周几，更整洁 */
+  align-items: flex-start;
+  padding: 20px 20px 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.day-label {
+  font-size: 1.1rem; 
+  font-weight: 600; 
+  color: var(--text-primary);
+  display: flex; 
+  align-items: center; 
+  gap: 8px;
+}
+
+.day-label.is-today {
+  color: var(--today-accent); /* 今天使用强调色文字 */
+}
+
+/* “今天”的小圆点指示器 */
+.day-label.is-today::after {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--today-accent);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.weekday-label {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+/* ── 时间分组 (Time Groups: Morning/Afternoon/Evening) ── */
+.time-group {
+  flex: 1;
+  display: flex; 
+  flex-direction: column;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-soft);
+  min-height: 120px;
+}
+
+.time-group:last-child { border-bottom: none; }
+
+.time-label {
+  display: flex; 
+  align-items: center; 
+  gap: 8px;
+  font-size: 0.65rem; 
+  font-weight: 600;
+  letter-spacing: 0.08em; 
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 12px;
+}
+
+/* 给图标留出空间（如果有的话） */
+.time-label i, .time-label svg {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.task-list { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 10px; 
+}
+
+/* ── 返回今天按钮 (Minimal Back Button) ── */
+.minimal-back-btn {
+  position: absolute;
+  bottom: 24px;
+  display: flex; 
+  align-items: center; 
+  gap: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem; 
+  font-weight: 500;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border: 1px solid var(--border-mid);
+  border-radius: 100px;
+  padding: 8px 18px;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.minimal-back-btn:hover {
+  background: var(--today-bg);
+  border-color: var(--today-accent);
+  color: var(--today-accent);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.minimal-back-btn.left  { left: 32px; }
+.minimal-back-btn.right { right: 32px; }
+
+/* 响应式调整：针对小屏幕略微缩小间距 */
+@media (max-width: 768px) {
+  .day-column { flex: 0 0 240px; }
+  .main-container { padding: 0 16px; }
+}
