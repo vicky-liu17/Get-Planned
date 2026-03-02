@@ -25,18 +25,18 @@ export function useTasks(userEmail: string | null) {
   const saveTasks = useCallback((newTasks: Task[]) => {
     setTasks(newTasks);
     if (userEmail) {
-      localStorage.setItem(`getplanned_tasks_${userEmail}`, JSON.stringify(newTasks));
+      // 🌟 核心修复：存入本地前剔除 isNew，防止用户刷新页面后所有卡片再次乱飞
+      const tasksToSave = newTasks.map(({ isNew, ...rest }) => rest);
+      localStorage.setItem(`getplanned_tasks_${userEmail}`, JSON.stringify(tasksToSave));
     }
   }, [userEmail]);
 
-  // ── 3. AI 操作逻辑 (全部改为调用 saveTasks) ─────────────────────────────────
-// ── 3. AI 操作逻辑 (改造为支持多任务批处理) ─────────────────────────────────
+  // ── 3. AI 操作逻辑 (改造为支持多任务批处理 & 时长预估 & 图标识别) ────────────────
   const applyAIResult = useCallback((aiResult: any, todayStr: string) => {
     if (!aiResult) return { error: null };
     if (!userEmail) return { error: "Please log in first!" }; 
 
     // 1. 错误拦截
-    // 如果整体是 ERROR，或者 operations 里的第一个动作是 ERROR
     if (aiResult.action === "ERROR" || (aiResult.operations && aiResult.operations[0]?.action === "ERROR")) {
       const errMsg = aiResult.errorMessage || aiResult.operations?.[0]?.errorMessage || "Sorry, I couldn't process that.";
       return { error: errMsg, reasoning: null };
@@ -45,7 +45,7 @@ export function useTasks(userEmail: string | null) {
     // 2. 拷贝当前任务列表，用于在内存中进行批处理
     let currentTasks = [...tasks];
     
-    // 3. 兼容处理：提取 operations 数组（兼容万一 AI 没按格式返回的情况）
+    // 3. 兼容处理：提取 operations 数组
     const operations = aiResult.operations || (aiResult.action ? [aiResult] : []);
 
     // 4. 遍历并执行每一个操作
@@ -67,7 +67,11 @@ export function useTasks(userEmail: string | null) {
           location: details.location || "",
           recurrence: details.recurrence || "none",
           deletedDates: details.deletedDates || [],
-          completedDates: []
+          completedDates: [],
+          duration: details.duration || 30, 
+          isEstimatedDuration: details.isEstimatedDuration ?? true,
+          icon: details.icon || "Circle", // 接收 AI 给的图标
+          isNew: true // 🌟 核心修复：给刚刚生成的任务打上 isNew 标记，触发卡片飞入动画
         };
         
         currentTasks.push(newTask);
@@ -82,8 +86,6 @@ export function useTasks(userEmail: string | null) {
       else if (op.action === "DELETE" && op.targetTaskId) {
         currentTasks = currentTasks.filter(t => t.id !== op.targetTaskId);
       }
-      
-      // 注意：如果你之前实现了 MODIFY_INSTANCE 等其他逻辑，也可以在这里对应追加 else if
     });
 
     // 5. 批处理完成后，一次性保存到本地状态和 LocalStorage
@@ -93,9 +95,10 @@ export function useTasks(userEmail: string | null) {
     return { error: null, reasoning: aiResult.reasoning };
   }, [tasks, userEmail, saveTasks]);
 
-  // ── 4. 其他所有拖拽、修改操作 (全部改为 saveTasks) ───────────────────────────
-  const updateTask = useCallback((taskId: string, field: string, value: string) => {
-    saveTasks(tasks.map(t => t.id === taskId ? { ...t, [field]: value } : t));
+  // ── 4. 其他所有拖拽、修改操作 ───────────────────────────
+  
+  const updateTask = useCallback((taskId: string, updates: Partial<Task>) => {
+    saveTasks(tasks.map(t => t.id === taskId ? { ...t, ...updates } : t));
   }, [tasks, saveTasks]);
 
   const moveTask = useCallback((taskId: string, targetDate: string, targetBucket: string, remapTimeFn: (time: string, bucket: string) => string) => {

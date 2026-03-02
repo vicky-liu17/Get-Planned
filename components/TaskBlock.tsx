@@ -1,11 +1,29 @@
 // components/TaskBlock.tsx
 "use client";
 
-import { useState } from "react"; // 👈 新增引入 useState
-import { Clock, MapPin, Repeat, Check } from "lucide-react";
+import { useState } from "react"; 
+import { 
+  Clock, MapPin, Repeat, Check, Hourglass,
+  // 🌟 42个精选业务图标
+  BookOpen, PenTool, Briefcase, Monitor, GraduationCap, Calculator, FileText, 
+  Presentation, Code, Dumbbell, Heart, Activity, Pill, Apple, Droplet, 
+  Coffee, Utensils, Bed, ShoppingCart, Home, Sun, Moon, Bath, Shirt, 
+  Wrench, Users, Phone, Mail, MessageCircle, Video, Plane, Car, Bus, 
+  Map, Music, Tv, Gamepad2, Camera, Ticket, Palette, Star, Circle
+} from "lucide-react"; 
 import { Task } from "@/types";
 import { getCategoryClass } from "@/utils/taskUtils";
 import { EditField } from "@/hooks/useInlineEdit";
+import { formatDuration } from "@/utils/dateUtils";
+
+// 🌟 图标映射字典
+const ICON_MAP: Record<string, React.ElementType> = {
+  BookOpen, PenTool, Briefcase, Monitor, GraduationCap, Calculator, FileText, 
+  Presentation, Code, Dumbbell, Heart, Activity, Pill, Apple, Droplet, 
+  Coffee, Utensils, Bed, ShoppingCart, Home, Sun, Moon, Bath, Shirt, 
+  Wrench, Users, Phone, Mail, MessageCircle, Video, Plane, Car, Bus, 
+  Map, Music, Tv, Gamepad2, Camera, Ticket, Palette, Star, Circle
+};
 
 interface TaskBlockProps {
   task: Task;
@@ -29,6 +47,17 @@ interface TaskBlockProps {
   onToggleComplete: (taskId: string, date: string) => void;
 }
 
+// 🌟 播放本地 MP3 音效
+const playSuccessSound = () => {
+  try {
+    const audio = new Audio("/sounds/success.mp3");
+    audio.volume = 0.6; // 音量控制在 60%，清脆不刺耳
+    audio.play().catch(e => console.log("Audio play failed (maybe browser auto-play policy):", e));
+  } catch (e) {
+    console.log("Audio not supported.", e);
+  }
+};
+
 export default function TaskBlock({
   task,
   targetDate,
@@ -51,9 +80,10 @@ export default function TaskBlock({
 }: TaskBlockProps) {
   const isEditing = editingTaskId === task.id;
   const isCompleted = task.completedDates?.includes(targetDate);
-  
-  // 👈 新增：专门用于控制喷发动画的局部状态
   const [showBurst, setShowBurst] = useState(false); 
+
+  // 🌟 解析 AI 给的图标，默认使用 Circle
+  const TaskIcon = ICON_MAP[task.icon || "Circle"] || Circle;
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") onSaveEdit(task.id);
@@ -61,39 +91,48 @@ export default function TaskBlock({
   };
 
   const handleToggleCheck = (e: React.MouseEvent) => {
-    e.stopPropagation(); // 关键：阻止冒泡，避免触发编辑模式
+    e.stopPropagation(); 
     
-    // 👈 新增核心逻辑：只有在“点击且即将完成”的那一刻才触发动画
     if (!isCompleted) {
       setShowBurst(true);
-      // 动画播放完后重置状态（假设 CSS 动画大约需要 1 秒，可根据你的 CSS 时长微调）
+      playSuccessSound(); // 🌟 触发 MP3 音效
       setTimeout(() => setShowBurst(false), 1000); 
     }
 
     onToggleComplete(task.id, targetDate);
   };
 
+  const calculateMinHeight = () => {
+    if (!task.duration) return "auto";
+    const baseHeight = 65;
+    const dynamicHeight = Math.min(Math.max(baseHeight + (task.duration - 30) * 0.4, baseHeight), 140);
+    return `${dynamicHeight}px`;
+  };
+
   return (
     <div
       key={`${task.id}-${targetDate}`}
-      className={`task-block ${getCategoryClass(task.category)} ${isCompleted ? "is-completed" : ""}`}
+      // 🌟 核心：如果有 isNew 标记，就挂载 is-new 类名来触发 CSS 里的飞入动效
+      className={`task-block ${getCategoryClass(task.category)} ${isCompleted ? "is-completed" : ""} ${task.isNew ? "is-new" : ""}`}
       style={{
         cursor: isDragging ? "grabbing" : "grab",
         userSelect: "none",
         touchAction: "none",
         opacity: isDragging ? 0.3 : 1,
+        minHeight: calculateMinHeight(),
       }}
       onPointerDown={(e) => onPointerDown(e, task.id, targetDate)}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
     >
-      {/* Header Row: Dot + Title + Done Button */}
       <div className="task-header">
-        {/* 左侧：纯分类标识点（不可点击） */}
-        <div className="task-dot" />
+        
+        {/* 🌟 动态语义图标 */}
+        <div className="task-icon-wrapper">
+          <TaskIcon size={14} strokeWidth={2.5} />
+        </div>
 
-        {/* 中间：标题内容 */}
         <div className="task-title-area">
           {isEditing && editingField === "taskName" ? (
             <input
@@ -117,27 +156,21 @@ export default function TaskBlock({
                 {task.taskName}
               </span>
               {task.recurrence && task.recurrence !== "none" && (
-                <Repeat
-                  size={11}
-                  strokeWidth={3}
-                  className="repeat-icon"
-                />
+                <Repeat size={11} strokeWidth={3} className="repeat-icon" />
               )}
             </div>
           )}
         </div>
 
-        {/* 右侧：交互式完成按钮 */}
         <div 
           className={`task-done-btn ${isCompleted ? "is-active" : ""}`}
           onClick={handleToggleCheck}
-          onPointerDown={(e) => e.stopPropagation()} // 防止触发卡片拖拽
+          onPointerDown={(e) => e.stopPropagation()} 
         >
           <div className="done-circle">
             <Check size={12} strokeWidth={4} className="check-mark" />
           </div>
           
-          {/* 👈 修改点：不再依赖 isCompleted，而是依赖我们手动控制的 showBurst */}
           {showBurst && (
             <div className="achievement-burst">
               {[...Array(6)].map((_, i) => (
@@ -148,9 +181,9 @@ export default function TaskBlock({
         </div>
       </div>
 
-      {/* Meta Row: Time & Location */}
-      {(task.exactTime || task.location || isEditing) && (
+      {(task.exactTime || task.duration || task.location || isEditing) && (
         <div className={`task-meta ${isCompleted ? "completed-meta" : ""}`}>
+          
           {(task.exactTime || (isEditing && editingField === "exactTime")) && (
             <span className="task-meta-item">
               <Clock size={11} strokeWidth={2.5} />
@@ -201,6 +234,36 @@ export default function TaskBlock({
                   }}
                 >
                   {task.exactTime}
+                </span>
+              )}
+            </span>
+          )}
+
+          {(task.duration || (isEditing && editingField === "duration")) && (
+            <span className="task-meta-item">
+              <Hourglass size={11} strokeWidth={2.5} />
+              {isEditing && editingField === "duration" ? (
+                <input
+                  autoFocus
+                  className="inline-edit-input location-edit"
+                  style={{ width: '45px' }}
+                  value={editValue}
+                  placeholder="e.g. 2h"
+                  onChange={(e) => onSetEditValue(e.target.value)}
+                  onBlur={() => onSaveEdit(task.id)}
+                  onKeyDown={handleKeyDown}
+                />
+              ) : (
+                <span
+                  style={{ cursor: isCompleted ? "default" : "text" }}
+                  onDoubleClick={(e) => {
+                    if (isCompleted) return;
+                    e.stopPropagation();
+                    onDoubleClick(task, "duration");
+                  }}
+                  title={task.isEstimatedDuration ? "AI Estimated (Double click to lock)" : "Duration"}
+                >
+                  {formatDuration(task.duration, task.isEstimatedDuration)}
                 </span>
               )}
             </span>

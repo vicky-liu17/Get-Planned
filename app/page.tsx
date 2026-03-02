@@ -11,6 +11,7 @@ import InputBar from "@/components/InputBar";
 import CalendarBoard from "@/components/CalendarBoard";
 import ActionDesk from "@/components/ActionDesk";
 import AuthModal from "@/components/AuthModal";
+import TypewriterText from "@/components/TypewriterText";
 
 export default function Home() {
   const [inputValue, setInputValue] = useState("");
@@ -72,10 +73,10 @@ export default function Home() {
   } = useTasks(userEmail);
 
   // ── Inline editing ───────────────────────────────────────────────────────────
-  const {
+ const {
     editingTaskId, editingField, editValue, editTime, hourInputRef, minuteInputRef,
     setEditValue, setEditTime, startEdit, commitEdit, cancelEdit,
-  } = useInlineEdit((taskId, field, value) => updateTask(taskId, field, value));
+  } = useInlineEdit((taskId, updates) => updateTask(taskId, updates));
 
   // ── Drag & Drop ──────────────────────────────────────────────────────────────
   const { draggingTaskId, dropTarget, hoveringActionZone, handlePointerDown, handlePointerMove, handlePointerUp } =
@@ -180,7 +181,7 @@ export default function Home() {
             boxShadow: 'var(--shadow-sm)', textAlign: 'left'
           }}>
             <span style={{fontWeight: 600, color: 'var(--today-accent)', marginRight: '6px'}}>✨ AI:</span>
-            {aiReasoning}
+            <TypewriterText text={aiReasoning} />
             <span 
               onClick={() => setAiReasoning("")} 
               style={{cursor: 'pointer', marginLeft: '12px', color: '#999', fontWeight: 'bold'}}

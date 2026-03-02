@@ -1,16 +1,18 @@
 // hooks/useInlineEdit.ts
 import { useState, useRef } from "react";
 import { Task } from "@/types";
+import { parseDurationToMins } from "@/utils/dateUtils";
 
-export type EditField = "taskName" | "exactTime" | "location";
+// 🌟 核心修复点1：必须在这里把 "duration" 加进去！
+export type EditField = "taskName" | "exactTime" | "location" | "duration";
 
-export function useInlineEdit(onSave: (taskId: string, field: EditField, value: string) => void) {
+// 🌟 核心修复点2：onSave 的参数改为接收 updates 对象
+export function useInlineEdit(onSave: (taskId: string, updates: Partial<Task>) => void) {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<EditField | null>(null);
   const [editValue, setEditValue] = useState("");
   const [editTime, setEditTime] = useState({ h: "", m: "" });
 
-  // 👇 关键修改：显式告诉 TypeScript，这个 Ref 允许为 null
   const hourInputRef = useRef<HTMLInputElement | null>(null);
   const minuteInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -21,6 +23,9 @@ export function useInlineEdit(onSave: (taskId: string, field: EditField, value: 
       const [h = "", m = ""] = (task.exactTime || "").split(":");
       setEditTime({ h, m });
       setTimeout(() => hourInputRef.current?.focus(), 10);
+    } else if (field === "duration") {
+      // 时长编辑：如果有值就转成文本，没有就是空
+      setEditValue(task.duration ? `${task.duration}m` : "");
     } else {
       setEditValue(task[field] || "");
     }
@@ -28,23 +33,29 @@ export function useInlineEdit(onSave: (taskId: string, field: EditField, value: 
 
   const commitEdit = (taskId: string) => {
     if (!editingField) return;
-    let finalValue = "";
+    
     if (editingField === "exactTime") {
-      if (editTime.h === "" && editTime.m === "") {
-        finalValue = "";
-      } else {
+      let finalValue = "";
+      if (editTime.h !== "" || editTime.m !== "") {
         const finalH = editTime.h.padStart(2, "0");
         const finalM = editTime.m.padStart(2, "0");
         finalValue = `${finalH}:${finalM}`;
         if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(finalValue)) {
-          cancelEdit();
-          return;
+          cancelEdit(); return;
         }
       }
+      onSave(taskId, { exactTime: finalValue });
+    } else if (editingField === "duration") {
+      // 解析用户输入的时长，并把“猜测”标记设为 false
+      const mins = parseDurationToMins(editValue);
+      if (mins > 0) {
+        onSave(taskId, { duration: mins, isEstimatedDuration: false });
+      } else {
+        onSave(taskId, { duration: undefined, isEstimatedDuration: false });
+      }
     } else {
-      finalValue = editValue.trim();
+      onSave(taskId, { [editingField]: editValue.trim() });
     }
-    onSave(taskId, editingField, finalValue);
     cancelEdit();
   };
 

@@ -23,19 +23,32 @@ export async function POST(req: Request) {
             dateRef.push(`- ${label}: ${y}-${m}-${dNum} (${weekdays[tempD.getDay()]})`);
         }
 
-        // [Core Failsafe 2] Feed existing task properties to the AI to prevent loss of colors and attributes during updates
-        const contextTasks = (tasks || []).map((t: any) => ({
-            id: t.id,
-            name: t.taskName,
-            date: t.suggestedDate,
-            endDate: t.endDate || "",
-            timeBucket: t.timeBucket,
-            category: t.category,       
-            exactTime: t.exactTime,     
-            location: t.location,       
-            recurrence: t.recurrence,
-            deletedDates: t.deletedDates || []
-        }));
+        // [Core Failsafe 2] Feed existing task properties to the AI, and pre-calculate exact end times to prevent math hallucination
+        const contextTasks = (tasks || []).map((t: any) => {
+            let endTimeStr = "";
+            if (t.exactTime && t.duration) {
+                const [h, m] = t.exactTime.split(':').map(Number);
+                const totalMins = h * 60 + m + t.duration;
+                const endH = Math.floor(totalMins / 60) % 24;
+                const endM = totalMins % 60;
+                endTimeStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+            }
+
+            return {
+                id: t.id,
+                name: t.taskName,
+                date: t.suggestedDate,
+                endDate: t.endDate || "",
+                timeBucket: t.timeBucket,
+                category: t.category,       
+                exactTime: t.exactTime,
+                duration: t.duration,
+                calculatedEndTime: endTimeStr, // 🌟 新增：由前端/NodeJS算好的精确结束时间，免去 AI 自己做加法
+                location: t.location,       
+                recurrence: t.recurrence,
+                deletedDates: t.deletedDates || []
+            };
+        });
 
         const response = await fetch("https://api.deepseek.com/chat/completions", {
             method: "POST",
@@ -55,31 +68,40 @@ Current local time is ${currentTime || "Unknown"} (24-hour format).
 CRITICAL CALENDAR REFERENCE:
 ${dateRef.join('\n')}
 
-Current Tasks Schedule:
+Current Tasks Schedule (WITH EXACT END TIMES):
 ${JSON.stringify(contextTasks)}
 
 Rules:
-1. DATE DEFAULT & SMART SPILLOVER (CRITICAL): If the user does not specify a date, your first choice is TODAY. HOWEVER, check the "Current Tasks Schedule". If TODAY is crowded (e.g., 2+ tasks in a bucket), you MUST spill over flexible tasks to TOMORROW. If TOMORROW is also crowded, intelligently push tasks to the DAY AFTER TOMORROW. Your goal is a healthy, balanced schedule across the next 3-4 days.
+1. DATE DEFAULT & SMART SPILLOVER: If no date is specified, DEFAULT TO TODAY. If Today is crowded, intelligently spill over flexible tasks to TOMORROW.
 2. STRICT TIME TRAVEL BAN: Convert "exactTime" to 24-hour HH:MM. If "suggestedDate" is TODAY and "exactTime" < "${currentTime}", REJECT IT. EXCEPTION: If current time > 20:00 and user inputs "0:00" or "midnight", set "suggestedDate" to Tomorrow.
 3. EXACT TIME & BUCKET MAPPING: "timeBucket" MUST strictly logically match "exactTime". 
    - 00:00 to 11:59 = "morning"
    - 12:00 to 17:59 = "afternoon"
    - 18:00 to 23:59 = "evening"
-4. ABSOLUTE CHRONOLOGICAL ORDER: If tasks are linked by sequences like "then" (e.g., Task A, then Task B), Task A MUST be scheduled BEFORE or at the SAME TIME as Task B. Sequence strictly overrules load balancing.
-5. MULTI-DAY LOAD BALANCING: For independent tasks without "then", distribute them to less crowded buckets AND less crowded days. Do not cram 4-5 tasks into one day if the next day is completely empty.
+4. ABSOLUTE CHRONOLOGICAL ORDER: If tasks are linked by sequences like "then" (e.g., Task A, then Task B), Task A MUST be scheduled BEFORE or at the SAME TIME as Task B.
+5. MULTI-DAY LOAD BALANCING: For independent tasks without "then", distribute them to less crowded buckets AND less crowded days.
 6. CREATE: return action="CREATE", fill "taskDetails".
 7. UPDATE: return action="UPDATE", set "targetTaskId", provide FULL updated "taskDetails" (preserve category/exactTime/location).
 8. DELETE: return action="DELETE", set "targetTaskId".
-9. REASONING: Provide a short, friendly explanation of your arrangement logic in the "reasoning" field. Explain your priorities, and explicitly mention if you pushed a task to tomorrow or the day after tomorrow to balance their workload. End it with: "(Tip: You can drag and drop cards to adjust the calendar!)".
+9. REASONING: Provide a friendly, human-like explanation of your schedule. 
+   - DO NOT mention internal technical details like "Icon is appropriate", "CalculatedEndTime", or "JSON".
+   - DO NOT repeat the date in YYYY-MM-DD format unless necessary; use "next Monday", "tomorrow", or "this evening".
+   - FOCUS on the "Why": e.g., "I've tucked your TV time into next Monday evening so it doesn't clash with your movie plans."
+   - Keep it concise (2-3 sentences).
+   - End it with: "(Tip: You can drag and drop cards to adjust the calendar!)".
+10. DURATION & ESTIMATION: EVERY task MUST have a "duration" (in minutes). If explicitly stated, set "duration" and "isEstimatedDuration": false. If NOT stated, logically estimate it and set "isEstimatedDuration": true.
+11. PRECISE CONFLICT DETECTION: NEVER overlap tasks. If a conflict occurs, shift the new task forward.
+12. ICON SELECTION (NEW): Choose the MOST appropriate icon from this EXACT list: 
+["BookOpen" (reading), "PenTool" (writing), "Briefcase" (work), "Monitor" (computer), "GraduationCap" (study), "Calculator" (finance/math), "FileText" (document), "Presentation" (meeting), "Code" (programming), "Dumbbell" (gym), "Heart" (care/health), "Activity" (sports), "Pill" (medicine), "Apple" (diet), "Droplet" (water/cleaning), "Coffee" (break), "Utensils" (eating/cooking), "Bed" (sleep), "ShoppingCart" (shopping), "Home" (housework), "Sun" (outdoors), "Moon" (night), "Bath" (shower), "Shirt" (laundry), "Wrench" (repair), "Users" (social), "Phone" (calling), "Mail" (email), "MessageCircle" (chat), "Video" (video call), "Plane" (flight), "Car" (driving), "Bus" (transit), "Map" (navigation), "Music" (audio/music), "Tv" (watching tv/movie), "Gamepad2" (gaming), "Camera" (photo), "Ticket" (cinema/event), "Palette" (art), "Star" (important), "Circle" (other/fallback)]. MUST use "Circle" if unsure.
 
 Return ONLY a valid JSON object matching this EXACT schema:
 {
-  "reasoning": "string (Your explanation of the schedule)",
+  "reasoning": "string",
   "operations": [
     {
       "action": "CREATE" | "UPDATE" | "DELETE" | "MODIFY_INSTANCE" | "ERROR",
       "targetTaskId": "string (empty if CREATE or ERROR)",
-      "targetDate": "YYYY-MM-DD (only if action is MODIFY_INSTANCE)",
+      "targetDate": "YYYY-MM-DD",
       "taskDetails": {
         "taskName": "string",
         "suggestedDate": "YYYY-MM-DD",
@@ -89,9 +111,12 @@ Return ONLY a valid JSON object matching this EXACT schema:
         "exactTime": "HH:MM" | "",
         "location": "string" | "",
         "recurrence": "none" | "daily" | "weekdays" | "weekends" | "weekly" | "monthly",
-        "deletedDates": ["YYYY-MM-DD"]
+        "deletedDates": ["YYYY-MM-DD"],
+        "duration": "number",
+        "isEstimatedDuration": "boolean",
+        "icon": "string (from the allowed list)"
       },
-      "errorMessage": "string (only if action is ERROR)"
+      "errorMessage": "string"
     }
   ]
 }`

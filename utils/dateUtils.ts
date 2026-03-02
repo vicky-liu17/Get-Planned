@@ -80,3 +80,29 @@ export const isTaskOnDate = (task: Task, targetDateStr: string) => {
     default: return false;
   }
 };
+
+// 将分钟转为人类可读的格式 (如 120 -> "2h", 45 -> "45m")
+export const formatDuration = (mins?: number, isEstimated?: boolean) => {
+  if (!mins) return "";
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  let text = "";
+  if (h > 0) text += `${h}h`;
+  if (m > 0) text += `${h > 0 ? ' ' : ''}${m}m`;
+  return (isEstimated ? "~" : "") + text; // 如果是猜测的，前面加个波浪号
+};
+
+// 将用户输入的 "2h", "45m", "1.5h" 解析回分钟数
+export const parseDurationToMins = (text: string): number => {
+  let mins = 0;
+  const lowerText = text.toLowerCase().trim();
+  const hMatch = lowerText.match(/(\d+(\.\d+)?)h/);
+  const mMatch = lowerText.match(/(\d+)m/);
+  const pureNum = lowerText.match(/^(\d+)$/);
+
+  if (hMatch) mins += parseFloat(hMatch[1]) * 60;
+  if (mMatch) mins += parseInt(mMatch[1], 10);
+  if (pureNum) mins = parseInt(pureNum[1], 10); // 如果只输入数字，默认当成分钟
+
+  return Math.round(mins);
+};

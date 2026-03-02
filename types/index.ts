@@ -11,6 +11,10 @@ export interface Task {
   recurrence?: "none" | "daily" | "weekdays" | "weekends" | "weekly" | "monthly";
   deletedDates?: string[]; 
   completedDates?: string[];
+  duration?: number; // 🌟 新增：时长（以分钟为单位）
+  isEstimatedDuration?: boolean; // 🌟 新增：标记是否为 AI 猜测的时长
+  icon?: string;
+  isNew?: boolean;
 }
 
 export interface DragState {

@@ -1,4 +1,6 @@
-/* styles/taskBlock.css — 右侧交互增强版 */
+/* ==========================================================================
+   styles/taskBlock.css — 右侧交互增强版 (Icon & Animations Fix)
+   ========================================================================== */
 
 /* ── 基础任务块 ── */
 .task-block {
@@ -6,30 +8,56 @@
   flex-direction: column;
   gap: 6px;
   padding: 12px 14px;
-  background: var(--surface-1);
+  /* 这里的背景色作为兜底，具体颜色在底部分类中覆盖 */
+  background: var(--surface-1); 
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
   font-weight: 500;
   cursor: grab;
   position: relative;
-  box-shadow: var(--shadow-sm);
-  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-  animation: popIn 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
-  overflow: visible; /* 允许粒子溢出边界喷发 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: transform 0.25s cubic-bezier(0.165, 0.84, 0.44, 1), 
+              box-shadow 0.25s cubic-bezier(0.165, 0.84, 0.44, 1),
+              opacity 0.3s ease, background 0.3s ease;
+  overflow: visible; 
 }
 
-/* ── 完成状态 (Completed State) ── */
+/* 🌟 核心修复：独立出来的飞入动画，只针对新添加的卡片触发 */
+.task-block.is-new {
+  animation: bubbleFlyIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes bubbleFlyIn {
+  0% { 
+    opacity: 0; 
+    transform: translateY(20px) scale(0.9); 
+  }
+  50% { 
+    opacity: 1; 
+    transform: translateY(-2px) scale(1.02); 
+  }
+  100% { 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+  }
+}
+
+.task-block:not(.is-completed):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.03);
+  border-color: var(--border-mid);
+}
+
+/* ── 完成状态 ── */
 .task-block.is-completed {
   background: var(--past-bg) !important;
   border-color: var(--border-soft) !important;
-  opacity: 0.6;
-  filter: grayscale(0.8); /* 增强灰暗感，让视觉重心离开已完成任务 */
+  opacity: 0.55; 
+  filter: grayscale(0.8);
   transform: scale(0.98);
   box-shadow: none;
 }
-
-/* 完成后的左侧色条变为中性灰 */
 .task-block.is-completed::before {
   background: var(--text-tertiary) !important;
 }
@@ -42,19 +70,19 @@
   width: 100%;
   justify-content: space-between;
 }
-
 .task-title-area {
   flex: 1;
-  min-width: 0; /* 防止长标题撑破容器 */
+  min-width: 0;
 }
 
-/* ── 左侧：分类圆点 (纯标识) ── */
-.task-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+/* 动态分类图标包裹器 */
+.task-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  background: var(--c-other);
+  color: currentColor; 
+  opacity: 0.9;
   transition: all 0.3s ease;
 }
 
@@ -68,12 +96,11 @@
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  opacity: 0; /* 平时隐藏 */
-  transform: translateX(8px);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+  transform: translateX(6px);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* 悬浮在卡片上，或者任务已经是完成状态时，显示按钮 */
 .task-block:hover .task-done-btn,
 .task-done-btn.is-active {
   opacity: 1;
@@ -89,22 +116,21 @@
   align-items: center;
   justify-content: center;
   background: transparent;
-  color: transparent; /* 勾号平时看不见 */
+  color: transparent;
   transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-/* 悬停按钮时的暗示 */
 .task-done-btn:hover .done-circle {
-  border-color: currentColor; /* 继承分类色 */
-  background: rgba(0, 0, 0, 0.03);
+  border-color: currentColor;
+  background: rgba(0, 0, 0, 0.04);
   color: currentColor;
+  transform: scale(1.05); 
 }
 
-/* 激活完成状态：实心变色 */
 .task-done-btn.is-active .done-circle {
-  background: currentColor; /* 继承分类色 */
+  background: currentColor;
   border-color: currentColor;
-  color: white; /* 显示白色勾号 */
+  color: white;
   transform: scale(1.1);
 }
 
@@ -112,18 +138,14 @@
   animation: checkPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.5);
 }
 
-/* ── 华丽粒子动效 (Achievement Burst) ── */
+/* ── 华丽粒子动效 ── */
 .achievement-burst {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 40px;
-  height: 40px;
+  top: 50%; left: 50%;
+  width: 40px; height: 40px;
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
-
-/* 扩散圆环 */
 .achievement-burst::before {
   content: '';
   position: absolute;
@@ -133,16 +155,13 @@
   opacity: 0;
   animation: ringSpread 0.6s ease-out forwards;
 }
-
 .particle {
   position: absolute;
-  width: 4px;
-  height: 4px;
+  width: 4px; height: 4px;
   background: currentColor;
   border-radius: 50%;
   opacity: 0;
-  top: 18px;
-  left: 18px;
+  top: 18px; left: 18px;
 }
 
 .p1 { --tx: -18px; --ty: -18px; animation: particleOut 0.5s 0.1s ease-out forwards; }
@@ -156,12 +175,10 @@
   0%   { transform: scale(0.2); opacity: 1; border-width: 3px; }
   100% { transform: scale(2.2); opacity: 0; border-width: 0px; }
 }
-
 @keyframes particleOut {
   0%   { transform: translate(0, 0) scale(1.2); opacity: 1; }
   100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
 }
-
 @keyframes checkPop {
   0% { transform: scale(0) rotate(-15deg); }
   100% { transform: scale(1) rotate(0deg); }
@@ -176,22 +193,20 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: -0.01em; 
 }
-
 .completed-text {
   text-decoration: line-through;
   text-decoration-thickness: 1.5px;
   text-decoration-color: var(--text-tertiary);
   color: var(--text-tertiary) !important;
 }
-
 .repeat-icon {
   display: inline-block;
   margin-left: 6px;
   opacity: 0.4;
   vertical-align: middle;
 }
-
 .task-meta {
   display: flex;
   align-items: center;
@@ -203,40 +218,50 @@
   color: var(--text-secondary);
   transition: opacity 0.3s ease;
 }
-
 .completed-meta {
   opacity: 0.5;
 }
+.task-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.task-meta-item svg {
+  opacity: 0.7; 
+}
 
-/* ── 分类颜色注入 (决定点、按钮颜色、粒子颜色) ── */
+/* ── 🌟 核心修复：分类颜色注入 (增加 .task-block 权重，防止被上方基础样式覆盖) ── */
 .task-block::before {
   content: '';
   position: absolute;
-  left: 0; top: 10px; bottom: 10px;
+  left: 0; top: 12px; bottom: 12px;
   width: 3px;
-  border-radius: 0 2px 2px 0;
+  border-radius: 0 4px 4px 0;
   transition: all 0.2s ease;
 }
 
-.task-work { color: var(--c-work); background: var(--cb-work); border-color: rgba(80, 115, 241, 0.15); }
-.task-work .task-dot, .task-work::before { background: var(--c-work); }
+.task-block.task-work { color: var(--c-work); background: var(--cb-work); border-color: rgba(80, 115, 241, 0.12); }
+.task-block.task-work::before { background: var(--c-work); }
 
-.task-study { color: var(--c-study); background: var(--cb-study); border-color: rgba(144, 101, 224, 0.15); }
-.task-study .task-dot, .task-study::before { background: var(--c-study); }
+.task-block.task-study { color: var(--c-study); background: var(--cb-study); border-color: rgba(144, 101, 224, 0.12); }
+.task-block.task-study::before { background: var(--c-study); }
 
-.task-health { color: var(--c-health); background: var(--cb-health); border-color: rgba(82, 186, 129, 0.15); }
-.task-health .task-dot, .task-health::before { background: var(--c-health); }
+.task-block.task-health { color: var(--c-health); background: var(--cb-health); border-color: rgba(82, 186, 129, 0.12); }
+.task-block.task-health::before { background: var(--c-health); }
 
-.task-ent, .task-fun { color: var(--c-fun); background: var(--cb-fun); border-color: rgba(255, 107, 139, 0.15); }
-.task-ent .task-dot, .task-fun .task-dot, .task-ent::before, .task-fun::before { background: var(--c-fun); }
+.task-block.task-ent, .task-block.task-fun { color: var(--c-fun); background: var(--cb-fun); border-color: rgba(255, 107, 139, 0.12); }
+.task-block.task-ent::before, .task-block.task-fun::before { background: var(--c-fun); }
 
-.task-life { color: var(--c-life); background: var(--cb-life); border-color: rgba(255, 181, 71, 0.15); }
-.task-life .task-dot, .task-life::before { background: var(--c-life); }
+.task-block.task-life { color: var(--c-life); background: var(--cb-life); border-color: rgba(255, 181, 71, 0.12); }
+.task-block.task-life::before { background: var(--c-life); }
 
-.task-other { color: var(--c-other); background: var(--cb-other); border-color: rgba(131, 142, 149, 0.15); }
-.task-other .task-dot, .task-other::before { background: var(--c-other); }
+.task-block.task-other { color: var(--c-other); background: var(--cb-other); border-color: rgba(131, 142, 149, 0.12); }
+.task-block.task-other::before { background: var(--c-other); }
 
-/* ── 行内编辑 ── */
+/* ==========================================================================
+   行内编辑框质感优化 & 时间输入框排版
+   ========================================================================== */
+
 .inline-edit-input {
   background: #fff;
   border: 1px solid var(--border-mid);
@@ -244,4 +269,50 @@
   padding: 2px 6px;
   outline: none;
   font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+.inline-edit-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--today-dim), 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.time-edit-wrapper {
+  display: inline-flex;
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--accent); 
+  border-radius: 4px;
+  padding: 0 2px;
+  box-shadow: 0 0 0 2px var(--today-dim), 0 1px 2px rgba(0,0,0,0.02);
+  transition: all 0.2s ease;
+}
+.time-split-input {
+  width: 22px; 
+  padding: 2px 0;
+  border: none;
+  background: transparent;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: inherit;
+  outline: none;
+  color: var(--text-primary);
+}
+.time-split-input::placeholder {
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+.time-split-input::-webkit-outer-spin-button,
+.time-split-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.time-colon {
+  font-weight: bold;
+  color: var(--text-tertiary);
+  margin: 0 1px;
 }
