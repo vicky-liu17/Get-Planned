@@ -34,7 +34,7 @@ export default function InputBar({
         placeholder={
           hasError
             ? errorMsg
-            : "Add, modify, or delete a task... e.g., Move reading to tomorrow"
+            : "Add, move, or delete tasks... e.g., 'Reschedule reading to 8pm"
         }
         className="main-input"
         autoFocus
