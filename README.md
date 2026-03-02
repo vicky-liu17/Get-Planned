@@ -3,7 +3,7 @@
 **GetPlanned** is an AI-native scheduling ecosystem designed to bridge the gap between human intent and machine execution. By leveraging Large Language Models (LLMs) and a custom-built spatial interaction engine, it transforms natural language commands into smart, conflict-free daily schedules.
 
 For a detailed technical deep-dive into the research background, HCI (Human-Computer Interaction) optimizations, and core architecture, please visit the project portfolio:
-👉 **[View Full Project Details & Research Case Study](https://www.google.com/search?q=https://vicky-liu17.github.io/)** *(Select **Project 3: Get Planned**)*.
+👉 **[View Full Project Details & Research Case Study](https://vicky-liu17.github.io/)** *(Select **Project 3: Get Planned**)*.
 
 ---
 
