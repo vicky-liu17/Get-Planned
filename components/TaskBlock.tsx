@@ -1,16 +1,16 @@
 // components/TaskBlock.tsx
 "use client";
 
-import { useState } from "react"; 
-import { 
+import { useState } from "react";
+import {
   Clock, MapPin, Repeat, Check, Hourglass,
   // 🌟 42个精选业务图标
-  BookOpen, PenTool, Briefcase, Monitor, GraduationCap, Calculator, FileText, 
-  Presentation, Code, Dumbbell, Heart, Activity, Pill, Apple, Droplet, 
-  Coffee, Utensils, Bed, ShoppingCart, Home, Sun, Moon, Bath, Shirt, 
-  Wrench, Users, Phone, Mail, MessageCircle, Video, Plane, Car, Bus, 
+  BookOpen, PenTool, Briefcase, Monitor, GraduationCap, Calculator, FileText,
+  Presentation, Code, Dumbbell, Heart, Activity, Pill, Apple, Droplet,
+  Coffee, Utensils, Bed, ShoppingCart, Home, Sun, Moon, Bath, Shirt,
+  Wrench, Users, Phone, Mail, MessageCircle, Video, Plane, Car, Bus,
   Map, Music, Tv, Gamepad2, Camera, Ticket, Palette, Star, Circle
-} from "lucide-react"; 
+} from "lucide-react";
 import { Task } from "@/types";
 import { getCategoryClass } from "@/utils/taskUtils";
 import { EditField } from "@/hooks/useInlineEdit";
@@ -18,10 +18,10 @@ import { formatDuration } from "@/utils/dateUtils";
 
 // 🌟 图标映射字典
 const ICON_MAP: Record<string, React.ElementType> = {
-  BookOpen, PenTool, Briefcase, Monitor, GraduationCap, Calculator, FileText, 
-  Presentation, Code, Dumbbell, Heart, Activity, Pill, Apple, Droplet, 
-  Coffee, Utensils, Bed, ShoppingCart, Home, Sun, Moon, Bath, Shirt, 
-  Wrench, Users, Phone, Mail, MessageCircle, Video, Plane, Car, Bus, 
+  BookOpen, PenTool, Briefcase, Monitor, GraduationCap, Calculator, FileText,
+  Presentation, Code, Dumbbell, Heart, Activity, Pill, Apple, Droplet,
+  Coffee, Utensils, Bed, ShoppingCart, Home, Sun, Moon, Bath, Shirt,
+  Wrench, Users, Phone, Mail, MessageCircle, Video, Plane, Car, Bus,
   Map, Music, Tv, Gamepad2, Camera, Ticket, Palette, Star, Circle
 };
 
@@ -35,7 +35,7 @@ interface TaskBlockProps {
   editTime: { h: string; m: string };
   hourInputRef: React.RefObject<HTMLInputElement | null>;
   minuteInputRef: React.RefObject<HTMLInputElement | null>;
-  
+
   onSetEditValue: (v: string) => void;
   onSetEditTime: (t: { h: string; m: string }) => void;
   onDoubleClick: (task: Task, field: EditField) => void;
@@ -80,7 +80,7 @@ export default function TaskBlock({
 }: TaskBlockProps) {
   const isEditing = editingTaskId === task.id;
   const isCompleted = task.completedDates?.includes(targetDate);
-  const [showBurst, setShowBurst] = useState(false); 
+  const [showBurst, setShowBurst] = useState(false);
 
   // 🌟 解析 AI 给的图标，默认使用 Circle
   const TaskIcon = ICON_MAP[task.icon || "Circle"] || Circle;
@@ -91,12 +91,12 @@ export default function TaskBlock({
   };
 
   const handleToggleCheck = (e: React.MouseEvent) => {
-    e.stopPropagation(); 
-    
+    e.stopPropagation();
+
     if (!isCompleted) {
       setShowBurst(true);
       playSuccessSound(); // 🌟 触发 MP3 音效
-      setTimeout(() => setShowBurst(false), 1000); 
+      setTimeout(() => setShowBurst(false), 1000);
     }
 
     onToggleComplete(task.id, targetDate);
@@ -127,7 +127,7 @@ export default function TaskBlock({
       onPointerCancel={onPointerUp}
     >
       <div className="task-header">
-        
+
         {/* 🌟 动态语义图标 */}
         <div className="task-icon-wrapper">
           <TaskIcon size={14} strokeWidth={2.5} />
@@ -135,9 +135,10 @@ export default function TaskBlock({
 
         <div className="task-title-area">
           {isEditing && editingField === "taskName" ? (
-            <input
+            <textarea // 🌟 建议：如果标题支持两行，编辑时换成 textarea 会更人性化
               autoFocus
               className="inline-edit-input title-edit"
+              rows={2}
               value={editValue}
               onChange={(e) => onSetEditValue(e.target.value)}
               onBlur={() => onSaveEdit(task.id)}
@@ -162,15 +163,15 @@ export default function TaskBlock({
           )}
         </div>
 
-        <div 
+        <div
           className={`task-done-btn ${isCompleted ? "is-active" : ""}`}
           onClick={handleToggleCheck}
-          onPointerDown={(e) => e.stopPropagation()} 
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <div className="done-circle">
             <Check size={12} strokeWidth={4} className="check-mark" />
           </div>
-          
+
           {showBurst && (
             <div className="achievement-burst">
               {[...Array(6)].map((_, i) => (
@@ -183,7 +184,7 @@ export default function TaskBlock({
 
       {(task.exactTime || task.duration || task.location || isEditing) && (
         <div className={`task-meta ${isCompleted ? "completed-meta" : ""}`}>
-          
+
           {(task.exactTime || (isEditing && editingField === "exactTime")) && (
             <span className="task-meta-item">
               <Clock size={11} strokeWidth={2.5} />

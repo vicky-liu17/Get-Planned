@@ -190,9 +190,15 @@
   color: var(--text-primary);
   line-height: 1.4;
   transition: all 0.3s ease;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  
+  /* 🌟 核心修改：从 nowrap 改为多行截断 */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;    /* 限制最多显示两行 */
+  overflow: hidden;         /* 超出部分隐藏 */
+  word-break: break-all;    /* 确保长英文单词也能正常换行 */
+  white-space: normal;      /* 允许正常换行 */
+  
   letter-spacing: -0.01em; 
 }
 .completed-text {
